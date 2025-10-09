@@ -16,6 +16,6 @@
   ],
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/backend/src/index.js" },
-    { "source": "/((?!api/|assets/).*)", "destination": "/frontend/dist/index.html" }
+    { "source": "/((?!api/|assets/).*)", "destination": "/index.html" }
   ]
 }
