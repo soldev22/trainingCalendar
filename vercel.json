@@ -1,6 +1,5 @@
 {
   "version": 2, 
-  "comment": "Forcing git update",
   "builds": [
     {
       "src": "backend/src/index.js",
