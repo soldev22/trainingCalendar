@@ -1,0 +1,60 @@
+const express = require('express');
+const Blackout = require('../models/Blackout');
+const { requireAuth } = require('../middleware/auth');
+
+const router = express.Router();
+
+// Create a blackout range
+// body: { startDate: 'YYYY-MM-DD', endDate: 'YYYY-MM-DD', portion: 'full'|'am'|'pm', reason? }
+router.post('/', requireAuth, async (req, res) => {
+  try {
+    const { startDate, endDate, portion, reason } = req.body;
+    if (!startDate || !endDate || !portion) {
+      return res.status(400).json({ ok: false, error: 'startDate, endDate and portion are required' });
+    }
+    if (!['full', 'am', 'pm'].includes(portion)) {
+      return res.status(400).json({ ok: false, error: "portion must be 'full', 'am', or 'pm'" });
+    }
+    const s = new Date(startDate);
+    const e = new Date(endDate);
+    if (isNaN(s.getTime()) || isNaN(e.getTime())) {
+      return res.status(400).json({ ok: false, error: 'Invalid date(s)' });
+    }
+    if (e < s) {
+      return res.status(400).json({ ok: false, error: 'endDate must be after or equal to startDate' });
+    }
+
+    const blackout = await Blackout.create({ startDate: s, endDate: e, portion, reason });
+    return res.status(201).json({ ok: true, blackout });
+  } catch (err) {
+    return res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+// Get blackouts intersecting a range
+// query: from=YYYY-MM-DD&to=YYYY-MM-DD
+router.get('/', async (req, res) => {
+  try {
+    const { from, to } = req.query;
+    if (!from || !to) {
+      return res.status(400).json({ ok: false, error: 'from and to are required' });
+    }
+    const f = new Date(from);
+    const t = new Date(to);
+    if (isNaN(f.getTime()) || isNaN(t.getTime())) {
+      return res.status(400).json({ ok: false, error: 'Invalid from/to' });
+    }
+    // Intersect where [startDate,endDate] overlaps [from,to]
+    const blackouts = await Blackout.find({
+      $and: [
+        { startDate: { $lte: t } },
+        { endDate: { $gte: f } },
+      ],
+    }).sort({ startDate: 1 });
+    return res.status(200).json({ ok: true, blackouts });
+  } catch (err) {
+    return res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+module.exports = router;
