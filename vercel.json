@@ -20,12 +20,9 @@
       "dest": "/backend/src/index.js"
     },
     {
-      "src": "/((?!api/|assets/).*)",
-      "dest": "/frontend/dist/index.html"
-    },
-    {
       "src": "/(.*)",
-      "dest": "/frontend/dist/$1"
+      "headers": { "cache-control": "s-maxage=0" },
+      "dest": "/frontend/dist/index.html"
     }
   ]
 }
