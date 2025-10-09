@@ -1,5 +1,5 @@
 {
-  "version": 2, 
+  "version": 2,
   "builds": [
     {
       "src": "backend/src/index.js",
@@ -8,14 +8,11 @@
     {
       "src": "frontend/package.json",
       "use": "@vercel/static-build",
-      "config": {
-        "buildCommand": "npm run build",
-        "outputDirectory": "dist"
-      }
+      "config": { "distDir": "dist" }
     }
   ],
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/backend/src/index.js" },
-    { "source": "/((?!api/|assets/).*)", "destination": "/index.html" }
+    { "source": "/(.*)", "destination": "/index.html" }
   ]
 }
