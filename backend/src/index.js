@@ -82,11 +82,11 @@ app.get('/health', (req, res) => {
   res.json({ ok: true, service: 'backend', time: new Date().toISOString() });
 });
 
-if (process.env.VERCEL_ENV !== 'production') {
-  app.listen(PORT, () => {
-    console.log(`[backend] Server listening on http://localhost:${PORT}`);
-    initMongo();
-  });
-}
+// Start the server
+app.listen(PORT, () => {
+  console.log(`[backend] Server listening on http://localhost:${PORT}`);
+  initMongo();
+});
 
 module.exports = app;
+
