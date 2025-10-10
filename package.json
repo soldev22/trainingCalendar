@@ -1,10 +1,13 @@
 {
   "private": true,
   "scripts": {
-    "build": "npm-run-all --serial clean build:frontend build:backend",
-    "build:frontend": "cd frontend && npm install && npm run build",
-    "build:backend": "mkdir -p dist/backend && cp -r backend/src/* dist/backend/",
-    "clean": "rimraf dist",
+    "install:backend": "cd backend && npm install --production",
+    "install:frontend": "cd frontend && npm install",
+    "build:frontend": "cd frontend && npm run build",
+    "build": "npm-run-all --parallel install:backend install:frontend && npm run build:frontend",
+    "start": "npm-run-all --parallel start:backend start:frontend",
+    "start:backend": "cd backend && npm start",
+    "start:frontend": "npx serve -s frontend/dist -l 3000",
     "dev": "npm-run-all --parallel dev:frontend dev:backend"
   },
   "devDependencies": {
