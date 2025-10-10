@@ -5,9 +5,7 @@
     "install:frontend": "cd frontend && npm install",
     "build:frontend": "cd frontend && npm run build",
     "build": "npm-run-all --parallel install:backend install:frontend && npm run build:frontend",
-    "start": "npm-run-all --parallel start:backend start:frontend",
-    "start:backend": "cd backend && npm start",
-    "start:frontend": "npx serve -s frontend/dist -l 3000",
+    "start": "cd backend && npm start",
     "dev": "npm-run-all --parallel dev:frontend dev:backend"
   },
   "devDependencies": {
