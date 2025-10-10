@@ -1,6 +1,39 @@
-{{ ... }}
-app.use('/api/blackouts', require('./routes/blackouts'));
-app.use('/api/admin', require('./routes/admin'));
+const express = require('express');
+const cors = require('cors');
+const mongoose = require('mongoose');
+const dotenv = require('dotenv');
+const path = require('path');
+
+dotenv.config();
+
+const app = express();
+app.use(cors());
+app.use(express.json());
+
+// attach maybeAuth for all requests so routes can read req.user if present
+try {
+  const { maybeAuth } = require('./middleware/auth');
+  app.use(maybeAuth);
+} catch {}
+
+const PORT = process.env.PORT || 3001;
+const MONGODB_URI = process.env.MONGODB_URI || '';
+
+// Connect to MongoDB Atlas via Mongoose
+async function initMongo() {
+  if (!MONGODB_URI) {
+    console.warn('[backend] MONGODB_URI is not set. /health/db will report not configured.');
+    return;
+  }
+  try {
+    await mongoose.connect(MONGODB_URI, {
+      serverSelectionTimeoutMS: 5000,
+    });
+    console.log('[backend] Connected to MongoDB via Mongoose');
+  } catch (err) {
+    console.error('[backend] Initial Mongo connection failed:', err.message);
+  }
+}
 
 // Health route to check DB connectivity
 app.get('/health/db', async (req, res) => {
@@ -36,6 +69,13 @@ app.get('/health/db', async (req, res) => {
   }
 });
 
+// API routes
+app.use('/api/auth', require('./routes/auth'));
+app.use('/api/events', require('./routes/events'));
+app.use('/api/blackouts', require('./routes/blackouts'));
+app.use('/api/admin', require('./routes/admin'));
+
+// Health check route - MUST be before the static file serving
 app.get('/health', (req, res) => {
   res.json({ ok: true, service: 'backend', time: new Date().toISOString() });
 });
@@ -50,4 +90,8 @@ app.get('*', (req, res) => {
 
 // Start the server
 app.listen(PORT, () => {
-{{ ... }}
+  console.log(`[backend] Server listening on http://localhost:${PORT}`);
+  initMongo();
+});
+
+module.exports = app;
