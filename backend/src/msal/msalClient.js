@@ -17,6 +17,9 @@ const msalConfig = {
   },
 };
 
+// Add this line for debugging
+console.log(`[DEBUG] Tenant ID: '${process.env.MICROSOFT_TENANT_ID}'`);
+
 const msalClient = new msal.ConfidentialClientApplication(msalConfig);
 
 module.exports = msalClient;
