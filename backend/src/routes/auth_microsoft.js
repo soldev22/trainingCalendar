@@ -9,7 +9,7 @@ const scopes = ['openid', 'profile', 'offline_access', 'user.read', 'calendars.r
 router.get('/signin', async (req, res) => {
   const authCodeUrlParameters = {
     scopes: scopes,
-    redirectUri: `https://mikesdiary.up.railway.app/api/auth/microsoft/callback`, // Replace with your actual URL
+    redirectUri: process.env.MICROSOFT_REDIRECT_URI, // Replace with your actual URL
   };
 
   try {
@@ -26,7 +26,7 @@ router.get('/callback', async (req, res) => {
   const tokenRequest = {
     code: req.query.code,
     scopes: scopes,
-    redirectUri: `https://mikesdiary.up.railway.app/api/auth/microsoft/callback`, // Replace with your actual URL
+    redirectUri: process.env.MICROSOFT_REDIRECT_URI, // Replace with your actual URL
   };
 
   try {
