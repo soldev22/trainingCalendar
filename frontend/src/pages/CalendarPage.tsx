@@ -168,20 +168,19 @@ export default function CalendarPage() {
 
     // Process and merge Microsoft events
     for (const msEvent of msEvents) {
-      const startDate = new Date(msEvent.start.dateTime);
-      const iso = fmtLocalYMD(startDate);
-      if (!map.has(iso)) map.set(iso, []);
+      const isoDate = msEvent.start.dateTime.substring(0, 10); // YYYY-MM-DD
+      if (!map.has(isoDate)) map.set(isoDate, []);
 
       const transformedEvent: EventItem = {
         _id: msEvent.id,
-        date: iso,
+        date: isoDate,
         reason: msEvent.subject,
         createdBy: msEvent.organizer.emailAddress.name,
-        startTime: startDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false }),
-        endTime: new Date(msEvent.end.dateTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false }),
+        startTime: msEvent.start.dateTime.substring(11, 16), // HH:mm
+        endTime: msEvent.end.dateTime.substring(11, 16), // HH:mm
         source: 'microsoft',
       };
-      map.get(iso)!.push(transformedEvent);
+      map.get(isoDate)!.push(transformedEvent);
     }
 
     // Sort events within each day

@@ -59,6 +59,7 @@ async function getCalendarEvents() {
 
     const events = await client
       .api(`/users/${userId}/events`)
+      .header('Prefer', 'outlook.timezone="GMT Standard Time"') // Request times in a specific timezone
       .select('subject,organizer,start,end')
       .orderby('start/dateTime DESC')
       .get();
