@@ -1,5 +1,8 @@
 const msal = require('@azure/msal-node');
 
+// Add this line for debugging
+console.log(`[DEBUG] Client ID:'${process.env.MICROSOFT_CLIENT_ID}'`);
+
 const msalConfig = {
   auth: {
     clientId: process.env.MICROSOFT_CLIENT_ID,
