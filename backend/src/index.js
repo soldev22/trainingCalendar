@@ -10,6 +10,18 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+const session = require('express-session');
+
+// Session middleware
+app.use(session({
+  secret: process.env.SESSION_SECRET, // This should be a long, random string in your .env file
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    secure: false, // Set to true if using https
+  }
+}));
+
 // attach maybeAuth for all requests so routes can read req.user if present
 try {
   const { maybeAuth } = require('./middleware/auth');
@@ -75,6 +87,7 @@ app.use('/api/events', require('./routes/events'));
 app.use('/api/blackouts', require('./routes/blackouts'));
 app.use('/api/admin', require('./routes/admin'));
 app.use('/api/auth/microsoft', require('./routes/auth_microsoft'));
+app.use('/api/calendar', require('./routes/calendar'));
 
 // Health check route - MUST be before the static file serving
 app.get('/health', (req, res) => {

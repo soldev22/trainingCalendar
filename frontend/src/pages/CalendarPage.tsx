@@ -10,6 +10,7 @@ type EventItem = {
   status?: 'provisional' | 'confirmed'
   startTime?: string
   endTime?: string
+  source?: 'local' | 'microsoft'
 }
 
 function startOfMonth(d: Date) {
@@ -56,6 +57,7 @@ export default function CalendarPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [blackouts, setBlackouts] = useState<Array<{ startDate: string; endDate: string; portion: 'full'|'am'|'pm'; reason?: string }>>([])
+  const [msEvents, setMsEvents] = useState<any[]>([]) // State for Microsoft events
   const token = getToken()
   const currentUser = useMemo(() => {
     const t = getToken();
@@ -70,6 +72,7 @@ export default function CalendarPage() {
     }
     return fmtLocalYMD(startOfMonth(cursor))
   }, [cursor, view])
+
   const to = useMemo(() => {
     if (view === 'week') return fmtLocalYMD(endOfWeek(cursor))
     if (view === 'year') {
@@ -80,186 +83,212 @@ export default function CalendarPage() {
   }, [cursor, view])
 
   useEffect(() => {
-    let cancelled = false
+    let cancelled = false;
     async function load() {
       try {
-        setLoading(true)
-        setError(null)
-        const [resE, resB] = await Promise.all([
+        setLoading(true);
+        setError(null);
+
+        const [resE, resB, resMs] = await Promise.all([
           fetch(`/api/events?from=${from}&to=${to}`),
           fetch(`/api/blackouts?from=${from}&to=${to}`),
-        ])
-        const dataE = await resE.json()
-        const dataB = await resB.json()
-        if (!resE.ok || !dataE.ok) throw new Error(dataE.error || 'Failed to load events')
-        if (!resB.ok || !dataB.ok) throw new Error(dataB.error || 'Failed to load blackouts')
+          fetch(`/api/calendar/events`),
+        ]);
+
+        // If the MS Graph call fails, it's a server-side issue, not a client one.
+        // We'll rely on the catch block to handle the error thrown by a non-ok response.
+        if (!resMs.ok) {
+            const errorData = await resMs.json();
+            throw new Error(errorData.error || 'Failed to load Microsoft calendar events');
+        }
+
+        if (!resE.ok) throw new Error((await resE.json()).error || 'Failed to load events');
+        if (!resB.ok) throw new Error((await resB.json()).error || 'Failed to load blackouts');
+
+        // If all successful, update state
         if (!cancelled) {
-          setEvents(dataE.events)
-          setBlackouts(dataB.blackouts)
+          const dataE = await resE.json();
+          const dataB = await resB.json();
+          setEvents(dataE.events);
+          setBlackouts(dataB.blackouts);
+
+          if (resMs.ok) {
+            const dataMs = await resMs.json();
+            setMsEvents(dataMs);
+          }
         }
       } catch (e: any) {
-        if (!cancelled) setError(e.message || 'Unexpected error')
+        if (!cancelled) {
+          setError(e.message || 'Unexpected error');
+        }
       } finally {
-        if (!cancelled) setLoading(false)
+        if (!cancelled) setLoading(false);
       }
     }
-    load()
+    load();
     return () => {
-      cancelled = true
-    }
-  }, [from, to])
-
-  const dayStatus = useMemo(() => {
-    // Map ISO date -> { confirmed: boolean, provisional: boolean }
-    const map = new Map<string, { confirmed: boolean; provisional: boolean }>()
-    for (const e of events) {
-      const iso = fmtLocalYMD(new Date(e.date))
-      if (!map.has(iso)) map.set(iso, { confirmed: false, provisional: false })
-      const bucket = map.get(iso)!
-      if (e.status === 'confirmed') bucket.confirmed = true
-      else bucket.provisional = true
-    }
-    return map
-  }, [events])
+      cancelled = true;
+    };
+  }, [from, to]);
 
   // Build per-day blackout portion map
   const dayBlackout = useMemo(() => {
-    // Map date -> 'none' | 'am' | 'pm' | 'full'
-    const map = new Map<string, 'none' | 'am' | 'pm' | 'full'>()
+    const map = new Map<string, 'none' | 'am' | 'pm' | 'full'>();
     function apply(dateIso: string, portion: 'full'|'am'|'pm') {
-      const cur = map.get(dateIso) || 'none'
+      const cur = map.get(dateIso) || 'none';
       if (portion === 'full' || cur === 'full') {
-        map.set(dateIso, 'full')
-        return
+        map.set(dateIso, 'full');
+        return;
       }
       if (cur === 'none') {
-        map.set(dateIso, portion)
+        map.set(dateIso, portion);
       } else if ((cur === 'am' && portion === 'pm') || (cur === 'pm' && portion === 'am')) {
-        map.set(dateIso, 'full')
-      } // else keep existing
-    }
-    for (const b of blackouts) {
-      const s = new Date(b.startDate)
-      const e = new Date(b.endDate)
-      // iterate days from s..e
-      for (let d = new Date(s); d <= e; d.setDate(d.getDate() + 1)) {
-        apply(fmtLocalYMD(d), b.portion)
+        map.set(dateIso, 'full');
       }
     }
-    return map
-  }, [blackouts])
+    for (const b of blackouts) {
+      const s = new Date(b.startDate);
+      const e = new Date(b.endDate);
+      for (let d = new Date(s); d <= e; d.setDate(d.getDate() + 1)) {
+        apply(fmtLocalYMD(d), b.portion);
+      }
+    }
+    return map;
+  }, [blackouts]);
 
   const dayEvents = useMemo(() => {
-    // Map ISO date -> EventItem[] sorted by startTime then reason
-    const map = new Map<string, EventItem[]>()
+    const map = new Map<string, EventItem[]>();
+
+    // Process local DB events
     for (const e of events) {
-      const iso = fmtLocalYMD(new Date(e.date))
-      if (!map.has(iso)) map.set(iso, [])
-      map.get(iso)!.push(e)
+      const iso = fmtLocalYMD(new Date(e.date));
+      if (!map.has(iso)) map.set(iso, []);
+      map.get(iso)!.push({ ...e, source: 'local' });
     }
-    for (const [k, arr] of map) {
+
+    // Process and merge Microsoft events
+    for (const msEvent of msEvents) {
+      const startDate = new Date(msEvent.start.dateTime);
+      const iso = fmtLocalYMD(startDate);
+      if (!map.has(iso)) map.set(iso, []);
+
+      const transformedEvent: EventItem = {
+        _id: msEvent.id,
+        date: iso,
+        reason: msEvent.subject,
+        createdBy: msEvent.organizer.emailAddress.name,
+        startTime: startDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false }),
+        endTime: new Date(msEvent.end.dateTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false }),
+        source: 'microsoft',
+      };
+      map.get(iso)!.push(transformedEvent);
+    }
+
+    // Sort events within each day
+    for (const arr of map.values()) {
       arr.sort((a, b) => {
-        const sa = a.startTime || ''
-        const sb = b.startTime || ''
-        if (sa !== sb) return sa < sb ? -1 : 1
-        return (a.reason || '').localeCompare(b.reason || '')
-      })
+        const sa = a.startTime || '';
+        const sb = b.startTime || '';
+        if (sa !== sb) return sa.localeCompare(sb);
+        return (a.reason || '').localeCompare(b.reason || '');
+      });
     }
-    return map
-  }, [events])
+    return map;
+  }, [events, msEvents]);
 
   // Build simple month grid (for Month view)
-  const first = startOfMonth(cursor)
-  const last = endOfMonth(cursor)
-  const daysInMonth = last.getDate()
-  const startWeekday = first.getDay() // 0=Sun..6=Sat
+  const first = startOfMonth(cursor);
+  const last = endOfMonth(cursor);
+  const daysInMonth = last.getDate();
+  const startWeekday = first.getDay();
 
-  const cells: Date[] = []
+  const cells: Date[] = [];
   for (let i = 0; i < startWeekday; i++) {
-    const d = new Date(first)
-    d.setDate(d.getDate() - (startWeekday - i))
-    cells.push(d)
+    const d = new Date(first);
+    d.setDate(d.getDate() - (startWeekday - i));
+    cells.push(d);
   }
   for (let d = 1; d <= daysInMonth; d++) {
-    const x = new Date(first)
-    x.setDate(d)
-    cells.push(x)
+    const x = new Date(first);
+    x.setDate(d);
+    cells.push(x);
   }
   while (cells.length % 7 !== 0) {
-    const lastCell = cells[cells.length - 1]
-    const x = new Date(lastCell)
-    x.setDate(x.getDate() + 1)
-    cells.push(x)
+    const lastCell = cells[cells.length - 1];
+    const x = new Date(lastCell);
+    x.setDate(x.getDate() + 1);
+    cells.push(x);
   }
 
   function prevMonth() {
-    const x = new Date(cursor)
-    if (view === 'week') x.setDate(x.getDate() - 7)
-    else if (view === 'year') x.setFullYear(x.getFullYear() - 1)
-    else x.setMonth(x.getMonth() - 1)
-    setCursor(x)
+    const x = new Date(cursor);
+    if (view === 'week') x.setDate(x.getDate() - 7);
+    else if (view === 'year') x.setFullYear(x.getFullYear() - 1);
+    else x.setMonth(x.getMonth() - 1);
+    setCursor(x);
   }
   function nextMonth() {
-    const x = new Date(cursor)
-    if (view === 'week') x.setDate(x.getDate() + 7)
-    else if (view === 'year') x.setFullYear(x.getFullYear() + 1)
-    else x.setMonth(x.getMonth() + 1)
-    setCursor(x)
+    const x = new Date(cursor);
+    if (view === 'week') x.setDate(x.getDate() + 7);
+    else if (view === 'year') x.setFullYear(x.getFullYear() + 1);
+    else x.setMonth(x.getMonth() + 1);
+    setCursor(x);
   }
 
   const monthLabel = view === 'year'
     ? cursor.getFullYear().toString()
     : view === 'week'
     ? `${fmtLocalYMD(startOfWeek(cursor))} → ${fmtLocalYMD(endOfWeek(cursor))}`
-    : cursor.toLocaleString(undefined, { month: 'long', year: 'numeric' })
+    : cursor.toLocaleString(undefined, { month: 'long', year: 'numeric' });
 
   function gotoMonth(monthIndex: number) {
-    const y = cursor.getFullYear()
-    const d = new Date(y, monthIndex, 1)
-    setCursor(d)
-    setView('month')
+    const y = cursor.getFullYear();
+    const d = new Date(y, monthIndex, 1);
+    setCursor(d);
+    setView('month');
   }
 
   function gotoWeek(date: Date) {
-    setCursor(new Date(date))
-    setView('week')
+    setCursor(new Date(date));
+    setView('week');
   }
 
   // Build week days (for Week view)
   const weekDays: Date[] = useMemo(() => {
-    if (view !== 'week') return []
-    const s = startOfWeek(cursor)
+    if (view !== 'week') return [];
+    const s = startOfWeek(cursor);
     return Array.from({ length: 7 }, (_, i) => {
-      const d = new Date(s)
-      d.setDate(s.getDate() + i)
-      return d
-    })
-  }, [cursor, view])
+      const d = new Date(s);
+      d.setDate(s.getDate() + i);
+      return d;
+    });
+  }, [cursor, view]);
 
   // Year view aggregation per month
   const monthAgg = useMemo(() => {
-    if (view !== 'year') return [] as Array<{ month: number; label: string; count: number; blackout: boolean }>
-    const y = cursor.getFullYear()
-    const arr: Array<{ month: number; label: string; count: number; blackout: boolean }> = []
+    if (view !== 'year') return [] as Array<{ month: number; label: string; count: number; blackout: boolean }>;
+    const y = cursor.getFullYear();
+    const arr: Array<{ month: number; label: string; count: number; blackout: boolean }> = [];
     for (let m = 0; m < 12; m++) {
-      const label = new Date(y, m, 1).toLocaleString(undefined, { month: 'short' })
-      arr.push({ month: m, label, count: 0, blackout: false })
+      const label = new Date(y, m, 1).toLocaleString(undefined, { month: 'short' });
+      arr.push({ month: m, label, count: 0, blackout: false });
     }
-    for (const e of events) {
-      const d = new Date(e.date)
-      if (d.getFullYear() === y) arr[d.getMonth()].count++
+    for (const e of dayEvents.values()) {
+        for (const event of e) {
+            const d = new Date(event.date);
+            if (d.getFullYear() === y) arr[d.getMonth()].count++;
+        }
     }
-    // Any blackout touching that month sets blackout flag
     for (const b of blackouts) {
-      const s = new Date(b.startDate)
-      const e = new Date(b.endDate)
-      if (s.getFullYear() !== y && e.getFullYear() !== y) continue
-      const mStart = s.getFullYear() === y ? s.getMonth() : 0
-      const mEnd = e.getFullYear() === y ? e.getMonth() : 11
-      for (let m = mStart; m <= mEnd; m++) arr[m].blackout = true
+      const s = new Date(b.startDate);
+      const e = new Date(b.endDate);
+      if (s.getFullYear() !== y && e.getFullYear() !== y) continue;
+      const mStart = s.getFullYear() === y ? s.getMonth() : 0;
+      const mEnd = e.getFullYear() === y ? e.getMonth() : 11;
+      for (let m = mStart; m <= mEnd; m++) arr[m].blackout = true;
     }
-    return arr
-  }, [events, blackouts, cursor, view])
+    return arr;
+  }, [dayEvents, blackouts, cursor, view]);
 
   return (
     <div className="container mt-4">
@@ -315,9 +344,9 @@ export default function CalendarPage() {
                 <div style={{ marginTop: 6, textAlign: 'left', fontSize: 12, color: '#111', maxHeight: 60, overflow: 'hidden' }}>
                   {(dayEvents.get(iso) || []).map((e, i) => {
                     const timeLabel = e.startTime && e.endTime ? `${e.startTime}–${e.endTime}` : e.startTime ? e.startTime : '';
-                    const labelBg = e.status === 'confirmed' ? '#fecaca' : '#fef08a';
+                    const labelBg = e.source === 'microsoft' ? '#bfdbfe' : e.status === 'confirmed' ? '#fecaca' : '#fef08a';
                     const labelColor = '#111';
-                    const canEdit = currentUser && (currentUser.role === 'admin' || currentUser.sub === e.createdBy);
+                    const canEdit = e.source === 'local' && currentUser && (currentUser.role === 'admin' || currentUser.sub === e.createdBy);
                     const eventEl = (
                       <span style={{
                         display: 'inline-block',
@@ -327,7 +356,7 @@ export default function CalendarPage() {
                         borderRadius: 4,
                         maxWidth: '100%',
                       }}>
-                        {timeLabel ? `${timeLabel} ` : ''}{e.reason}
+                        {timeLabel ? `${timeLabel} ` : ''}{e.source === 'microsoft' ? 'Busy' : e.reason}
                       </span>
                     );
                     return (
@@ -364,11 +393,11 @@ export default function CalendarPage() {
                 <div style={{ marginTop: 6, textAlign: 'left', fontSize: 12, color: '#111' }}>
                   {(dayEvents.get(iso) || []).map((e, i) => {
                     const timeLabel = e.startTime && e.endTime ? `${e.startTime}–${e.endTime}` : e.startTime ? e.startTime : '';
-                    const labelBg = e.status === 'confirmed' ? '#fecaca' : '#fef08a';
-                    const canEdit = currentUser && (currentUser.role === 'admin' || currentUser.sub === e.createdBy);
+                    const labelBg = e.source === 'microsoft' ? '#bfdbfe' : e.status === 'confirmed' ? '#fecaca' : '#fef08a';
+                    const canEdit = e.source === 'local' && currentUser && (currentUser.role === 'admin' || currentUser.sub === e.createdBy);
                     const eventEl = (
                       <span style={{ background: labelBg, padding: '2px 6px', borderRadius: 4 }}>
-                        {timeLabel ? `${timeLabel} ` : ''}{e.reason}
+                        {timeLabel ? `${timeLabel} ` : ''}{e.source === 'microsoft' ? 'Busy' : e.reason}
                       </span>
                     );
                     return (
