@@ -367,7 +367,7 @@ export default function CalendarPage() {
                   {d.getDate()}
                 </button>
                 <div style={{ marginTop: 6, textAlign: 'left', fontSize: 12, color: '#111', maxHeight: 60, overflow: 'hidden' }}>
-                  {(dayEvents.get(iso) || []).map((e, i) => {
+                  {(dayEvents.get(iso) || []).filter(ev => ev.source !== 'blackout').map((e, i) => {
                     const timeLabel = e.startTime && e.endTime ? `${e.startTime}–${e.endTime}` : e.startTime ? e.startTime : '';
                     const isBlackout = e.source === 'blackout';
                     const labelBg = isBlackout ? '#ef4444' : e.source === 'microsoft' ? '#bfdbfe' : e.status === 'confirmed' ? '#fecaca' : '#fef08a';
@@ -418,7 +418,7 @@ export default function CalendarPage() {
                   {d.toLocaleDateString(undefined, { weekday: 'short' })} {d.getDate()}
                 </div>
                 <div style={{ marginTop: 6, textAlign: 'left', fontSize: 12, color: '#111' }}>
-                  {(dayEvents.get(iso) || []).map((e, i) => {
+                  {(dayEvents.get(iso) || []).filter(ev => ev.source !== 'blackout').map((e, i) => {
                     const timeLabel = e.startTime && e.endTime ? `${e.startTime}–${e.endTime}` : e.startTime ? e.startTime : '';
                     const isBlackout = e.source === 'blackout';
                     const labelBg = isBlackout ? '#ef4444' : e.source === 'microsoft' ? '#bfdbfe' : e.status === 'confirmed' ? '#fecaca' : '#fef08a';

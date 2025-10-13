@@ -57,4 +57,39 @@ router.get('/', async (req, res) => {
   }
 });
 
+// Update a blackout by id
+// body: may include any of startDate, endDate, portion, reason
+router.patch('/:id', requireAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { startDate, endDate, portion, reason } = req.body;
+    const update = {};
+    if (startDate !== undefined) {
+      const s = new Date(startDate);
+      if (isNaN(s.getTime())) return res.status(400).json({ ok: false, error: 'Invalid startDate' });
+      update.startDate = s;
+    }
+    if (endDate !== undefined) {
+      const e = new Date(endDate);
+      if (isNaN(e.getTime())) return res.status(400).json({ ok: false, error: 'Invalid endDate' });
+      update.endDate = e;
+    }
+    if (portion !== undefined) {
+      if (!['full', 'am', 'pm'].includes(portion)) {
+        return res.status(400).json({ ok: false, error: "portion must be 'full', 'am', or 'pm'" });
+      }
+      update.portion = portion;
+    }
+    if (reason !== undefined) update.reason = reason;
+    if (update.startDate && update.endDate && update.endDate < update.startDate) {
+      return res.status(400).json({ ok: false, error: 'endDate must be after or equal to startDate' });
+    }
+    const blackout = await Blackout.findByIdAndUpdate(id, update, { new: true });
+    if (!blackout) return res.status(404).json({ ok: false, error: 'Not found' });
+    return res.status(200).json({ ok: true, blackout });
+  } catch (err) {
+    return res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
 module.exports = router;
