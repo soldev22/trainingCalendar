@@ -51,6 +51,22 @@ export default function BlackOutPage() {
     }
   }
 
+  async function deleteItem(id: string) {
+    try {
+      if (!confirm('Delete this blackout?')) return
+      const res = await fetch(`/api/blackouts/${id}`, {
+        method: 'DELETE',
+        headers: { ...authHeaders() },
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok || (data.ok === false)) throw new Error((data as any).error || 'Failed to delete blackout')
+      if (editingId === id) setEditingId(null)
+      void loadList()
+    } catch (e: any) {
+      alert(e.message || 'Unexpected error')
+    }
+  }
+
   async function loadList() {
     try {
       setLoadingList(true)
@@ -189,6 +205,7 @@ export default function BlackOutPage() {
                     ) : (
                       <div className="btn-group btn-group-sm">
                         <button className="btn btn-outline-primary" onClick={() => { setEditingId(it._id); setEdit({ startDate: it.startDate, endDate: it.endDate, portion: it.portion, reason: it.reason || 'Blackout' }) }}>Edit</button>
+                        <button className="btn btn-outline-danger" onClick={() => void deleteItem(it._id)}>Delete</button>
                       </div>
                     )}
                   </td>

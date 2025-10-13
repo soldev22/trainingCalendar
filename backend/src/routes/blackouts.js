@@ -92,4 +92,16 @@ router.patch('/:id', requireAuth, async (req, res) => {
   }
 });
 
+// Delete a blackout by id
+router.delete('/:id', requireAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const result = await Blackout.findByIdAndDelete(id);
+    if (!result) return res.status(404).json({ ok: false, error: 'Not found' });
+    return res.status(200).json({ ok: true });
+  } catch (err) {
+    return res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
 module.exports = router;
