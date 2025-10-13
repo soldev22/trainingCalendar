@@ -1,0 +1,53 @@
+[33mb721c02[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m v64
+[33m54a4379[m v63
+[33mf2549fc[m v62
+[33m6f6fd91[m v61
+[33md708f73[m v60
+[33mc256153[m v59
+[33m30bbc59[m WriteBack
+[33mfcd09f9[m v58
+[33m8c02b5c[m v57
+[33ma404588[m v56
+[33mf163a1b[m FirstIteration
+[33m2083df5[m v55
+[33m259bed9[m v54
+[33maa256ba[m v53
+[33m1370107[m v52
+[33m6dcd9a8[m v51
+[33m3c5ea78[m v50
+[33mfcb1cc5[m v46
+[33m5b787c4[m v45
+[33me306691[m v44
+[33m5b754cb[m v43
+[33m45617d9[m v42
+[33m045b597[m v41
+[33m1ef6477[m v40
+[33m18b9134[m v39
+[33m8ce3a98[m v38
+[33m44e4a63[m v37
+[33mc9c9c8d[m v36
+[33m2a1cc88[m 35
+[33m6358279[m 34
+[33m5694e73[m 33
+[33m8eebaf4[m 32
+[33me701abc[m v31
+[33m525b7c8[m v30
+[33m3565b43[m Add .gitignore and clean up tracked files
+[33m3f1dc48[m v18
+[33m2d205ac[m v17
+[33mdf504da[m v16
+[33mc2685d6[m v15
+[33m0942ede[m v14
+[33me7dc9d5[m v13
+[33mc1422aa[m vv12
+[33m9c51252[m v10
+[33m36d5dc2[m v9
+[33ma1d3589[m v8
+[33m4afd5e6[m v7
+[33m37d74ed[m v6
+[33m8591cf2[m v5
+[33m1b3b9ac[m v4
+[33mfc48b70[m fix(vercel): correct build configuration for frontend
+[33mcf69db6[m fix(vercel): correct build configuration for frontend
+[33m397b3c3[m v3
+[33m71250e9[m Initial Commit
