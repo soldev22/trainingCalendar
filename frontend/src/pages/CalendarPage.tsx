@@ -324,7 +324,7 @@ export default function CalendarPage() {
 
       {/* Legend at top */}
       <div className="mb-3" style={{ padding: 8, border: '1px solid #eee', background: '#fff' }}>
-        <span style={{ background: '#ef4444', color: '#fff', padding: '2px 6px', borderRadius: 4, display: 'inline-block' }}>Blackout</span>
+        <span style={{ background: '#374151', color: '#fff', padding: '2px 6px', borderRadius: 4, display: 'inline-block' }}>Blackout</span>
         <span style={{ background: '#bfdbfe', color: '#111', padding: '2px 6px', borderRadius: 4, display: 'inline-block', marginLeft: 8 }}>Microsoft</span>
         <span style={{ background: '#fecaca', color: '#111', padding: '2px 6px', borderRadius: 4, display: 'inline-block', marginLeft: 8 }}>Confirmed</span>
         <span style={{ background: '#fef08a', color: '#111', padding: '2px 6px', borderRadius: 4, display: 'inline-block', marginLeft: 8 }}>Provisional</span>
@@ -344,11 +344,11 @@ export default function CalendarPage() {
             const portion = dayBlackout.get(iso) || 'none';
             const tileBg =
               portion === 'full'
-                ? '#fecaca'
+                ? '#374151'
               : portion === 'am'
-                ? 'linear-gradient(to bottom, #fecaca 50%, #ffffff 50%)'
+                ? 'linear-gradient(to bottom, #374151 50%, #ffffff 50%)'
               : portion === 'pm'
-                ? 'linear-gradient(to bottom, #ffffff 50%, #fecaca 50%)'
+                ? 'linear-gradient(to bottom, #ffffff 50%, #374151 50%)'
               : 'white';
             return (
               <div
@@ -406,11 +406,11 @@ export default function CalendarPage() {
             const portion = dayBlackout.get(iso) || 'none';
             const tileBg =
               portion === 'full'
-                ? '#e5e7eb'
+                ? '#374151'
                 : portion === 'am'
-                ? 'linear-gradient(to bottom, #e5e7eb 50%, #ffffff 50%)'
+                ? 'linear-gradient(to bottom, #374151 50%, #ffffff 50%)'
                 : portion === 'pm'
-                ? 'linear-gradient(to bottom, #ffffff 50%, #e5e7eb 50%)'
+                ? 'linear-gradient(to bottom, #ffffff 50%, #374151 50%)'
                 : 'white';
             return (
               <div key={idx} style={{ padding: 8, border: '1px solid #eee', background: tileBg, minHeight: 120 }}>
@@ -440,7 +440,7 @@ export default function CalendarPage() {
             );
           })}
           <div style={{ gridColumn: '1 / -1', padding: 8, border: '1px solid #eee', background: '#fff' }}>
-            <span style={{ background: '#ef4444', color: '#fff', padding: '2px 6px', borderRadius: 4, display: 'inline-block' }}>Blackout</span>
+            <span style={{ background: '#374151', color: '#fff', padding: '2px 6px', borderRadius: 4, display: 'inline-block' }}>Blackout</span>
             <span style={{ background: '#bfdbfe', color: '#111', padding: '2px 6px', borderRadius: 4, display: 'inline-block', marginLeft: 8 }}>Microsoft</span>
             <span style={{ background: '#fecaca', color: '#111', padding: '2px 6px', borderRadius: 4, display: 'inline-block', marginLeft: 8 }}>Confirmed</span>
             <span style={{ background: '#fef08a', color: '#111', padding: '2px 6px', borderRadius: 4, display: 'inline-block', marginLeft: 8 }}>Provisional</span>
