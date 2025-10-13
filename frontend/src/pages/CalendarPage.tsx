@@ -367,12 +367,17 @@ export default function CalendarPage() {
                   {d.getDate()}
                 </button>
                 <div style={{ marginTop: 6, textAlign: 'left', fontSize: 12, color: '#111', maxHeight: 60, overflow: 'hidden' }}>
-                  {(dayEvents.get(iso) || []).filter(ev => ev.source !== 'blackout').map((e, i) => {
+                  {(dayEvents.get(iso) || [])
+                    .filter((ev: EventItem) => ev.source !== 'blackout')
+                    .map((e: EventItem, i: number) => {
                     const timeLabel = e.startTime && e.endTime ? `${e.startTime}–${e.endTime}` : e.startTime ? e.startTime : '';
                     const isBlackout = e.source === 'blackout';
                     const labelBg = isBlackout ? '#ef4444' : e.source === 'microsoft' ? '#bfdbfe' : e.status === 'confirmed' ? '#fecaca' : '#fef08a';
                     const labelColor = isBlackout ? '#fff' : '#111';
                     const canEdit = e.source === 'local' && currentUser && (currentUser.role === 'admin' || currentUser.sub === e.createdBy);
+                    const displayText = e.source === 'microsoft'
+                      ? (currentUser && currentUser.role === 'admin' ? (e.reason || 'Busy') : 'Busy')
+                      : (e.reason || '')
                     const eventEl = (
                       <span style={{
                         display: 'inline-block',
@@ -382,7 +387,7 @@ export default function CalendarPage() {
                         borderRadius: 4,
                         maxWidth: '100%',
                       }}>
-                        {timeLabel ? `${timeLabel} ` : ''}{e.source === 'microsoft' ? 'Busy' : e.reason}
+                        {timeLabel ? `${timeLabel} ` : ''}{displayText}
                       </span>
                     );
                     return (
@@ -418,15 +423,20 @@ export default function CalendarPage() {
                   {d.toLocaleDateString(undefined, { weekday: 'short' })} {d.getDate()}
                 </div>
                 <div style={{ marginTop: 6, textAlign: 'left', fontSize: 12, color: '#111' }}>
-                  {(dayEvents.get(iso) || []).filter(ev => ev.source !== 'blackout').map((e, i) => {
+                  {(dayEvents.get(iso) || [])
+                    .filter((ev: EventItem) => ev.source !== 'blackout')
+                    .map((e: EventItem, i: number) => {
                     const timeLabel = e.startTime && e.endTime ? `${e.startTime}–${e.endTime}` : e.startTime ? e.startTime : '';
                     const isBlackout = e.source === 'blackout';
                     const labelBg = isBlackout ? '#ef4444' : e.source === 'microsoft' ? '#bfdbfe' : e.status === 'confirmed' ? '#fecaca' : '#fef08a';
                     const labelColor = isBlackout ? '#fff' : '#111';
                     const canEdit = e.source === 'local' && currentUser && (currentUser.role === 'admin' || currentUser.sub === e.createdBy);
+                    const displayText = e.source === 'microsoft'
+                      ? (currentUser && currentUser.role === 'admin' ? (e.reason || 'Busy') : 'Busy')
+                      : (e.reason || '')
                     const eventEl = (
                       <span style={{ background: labelBg, color: labelColor, padding: '2px 6px', borderRadius: 4 }}>
-                        {timeLabel ? `${timeLabel} ` : ''}{e.source === 'microsoft' ? 'Busy' : e.reason}
+                        {timeLabel ? `${timeLabel} ` : ''}{displayText}
                       </span>
                     );
                     return (
