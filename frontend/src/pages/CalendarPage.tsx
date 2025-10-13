@@ -10,7 +10,7 @@ type EventItem = {
   status?: 'provisional' | 'confirmed'
   startTime?: string
   endTime?: string
-  source?: 'local' | 'microsoft'
+  source?: 'local' | 'microsoft' | 'blackout'
 }
 
 function startOfMonth(d: Date) {
@@ -183,6 +183,24 @@ export default function CalendarPage() {
       map.get(isoDate)!.push(transformedEvent);
     }
 
+    // Convert blackout ranges into per-day events
+    for (const b of blackouts) {
+      const s = new Date(b.startDate);
+      const e = new Date(b.endDate);
+      for (let d = new Date(s); d <= e; d.setDate(d.getDate() + 1)) {
+        const iso = fmtLocalYMD(d);
+        if (!map.has(iso)) map.set(iso, []);
+        const reasonText = b.reason ? `Blackout (${b.portion}) - ${b.reason}` : `Blackout (${b.portion})`;
+        map.get(iso)!.push({
+          _id: `blackout:${b.startDate}:${b.endDate}:${b.portion}:${iso}`,
+          date: iso,
+          reason: reasonText,
+          createdBy: 'system',
+          source: 'blackout',
+        });
+      }
+    }
+
     // Sort events within each day
     for (const arr of map.values()) {
       arr.sort((a, b) => {
@@ -193,7 +211,7 @@ export default function CalendarPage() {
       });
     }
     return map;
-  }, [events, msEvents]);
+  }, [events, msEvents, blackouts]);
 
   // Build simple month grid (for Month view)
   const first = startOfMonth(cursor);
@@ -343,8 +361,9 @@ export default function CalendarPage() {
                 <div style={{ marginTop: 6, textAlign: 'left', fontSize: 12, color: '#111', maxHeight: 60, overflow: 'hidden' }}>
                   {(dayEvents.get(iso) || []).map((e, i) => {
                     const timeLabel = e.startTime && e.endTime ? `${e.startTime}–${e.endTime}` : e.startTime ? e.startTime : '';
-                    const labelBg = e.source === 'microsoft' ? '#bfdbfe' : e.status === 'confirmed' ? '#fecaca' : '#fef08a';
-                    const labelColor = '#111';
+                    const isBlackout = e.source === 'blackout';
+                    const labelBg = isBlackout ? '#ef4444' : e.source === 'microsoft' ? '#bfdbfe' : e.status === 'confirmed' ? '#fecaca' : '#fef08a';
+                    const labelColor = isBlackout ? '#fff' : '#111';
                     const canEdit = e.source === 'local' && currentUser && (currentUser.role === 'admin' || currentUser.sub === e.createdBy);
                     const eventEl = (
                       <span style={{
@@ -368,6 +387,12 @@ export default function CalendarPage() {
               </div>
             );
           })}
+          <div style={{ gridColumn: '1 / -1', padding: 8, border: '1px solid #eee', background: '#fff' }}>
+            <span style={{ background: '#ef4444', color: '#fff', padding: '2px 6px', borderRadius: 4, display: 'inline-block' }}>Blackout</span>
+            <span style={{ background: '#bfdbfe', color: '#111', padding: '2px 6px', borderRadius: 4, display: 'inline-block', marginLeft: 8 }}>Microsoft</span>
+            <span style={{ background: '#fecaca', color: '#111', padding: '2px 6px', borderRadius: 4, display: 'inline-block', marginLeft: 8 }}>Confirmed</span>
+            <span style={{ background: '#fef08a', color: '#111', padding: '2px 6px', borderRadius: 4, display: 'inline-block', marginLeft: 8 }}>Provisional</span>
+          </div>
         </div>
       )}
 
@@ -392,10 +417,12 @@ export default function CalendarPage() {
                 <div style={{ marginTop: 6, textAlign: 'left', fontSize: 12, color: '#111' }}>
                   {(dayEvents.get(iso) || []).map((e, i) => {
                     const timeLabel = e.startTime && e.endTime ? `${e.startTime}–${e.endTime}` : e.startTime ? e.startTime : '';
-                    const labelBg = e.source === 'microsoft' ? '#bfdbfe' : e.status === 'confirmed' ? '#fecaca' : '#fef08a';
+                    const isBlackout = e.source === 'blackout';
+                    const labelBg = isBlackout ? '#ef4444' : e.source === 'microsoft' ? '#bfdbfe' : e.status === 'confirmed' ? '#fecaca' : '#fef08a';
+                    const labelColor = isBlackout ? '#fff' : '#111';
                     const canEdit = e.source === 'local' && currentUser && (currentUser.role === 'admin' || currentUser.sub === e.createdBy);
                     const eventEl = (
-                      <span style={{ background: labelBg, padding: '2px 6px', borderRadius: 4 }}>
+                      <span style={{ background: labelBg, color: labelColor, padding: '2px 6px', borderRadius: 4 }}>
                         {timeLabel ? `${timeLabel} ` : ''}{e.source === 'microsoft' ? 'Busy' : e.reason}
                       </span>
                     );
@@ -409,6 +436,12 @@ export default function CalendarPage() {
               </div>
             );
           })}
+          <div style={{ gridColumn: '1 / -1', padding: 8, border: '1px solid #eee', background: '#fff' }}>
+            <span style={{ background: '#ef4444', color: '#fff', padding: '2px 6px', borderRadius: 4, display: 'inline-block' }}>Blackout</span>
+            <span style={{ background: '#bfdbfe', color: '#111', padding: '2px 6px', borderRadius: 4, display: 'inline-block', marginLeft: 8 }}>Microsoft</span>
+            <span style={{ background: '#fecaca', color: '#111', padding: '2px 6px', borderRadius: 4, display: 'inline-block', marginLeft: 8 }}>Confirmed</span>
+            <span style={{ background: '#fef08a', color: '#111', padding: '2px 6px', borderRadius: 4, display: 'inline-block', marginLeft: 8 }}>Provisional</span>
+          </div>
         </div>
       )}
 
