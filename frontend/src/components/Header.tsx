@@ -8,6 +8,8 @@ export default function Header() {
   const token = getToken();
   const navigate = useNavigate();
   const [authModal, setAuthModal] = useState<'login' | 'register' | null>(null);
+  const [msLoading, setMsLoading] = useState(false);
+  const [msResult, setMsResult] = useState<{ label: string; color: string } | null>(null);
   const userRole = getUserRole();
 
   function handleLogout() {
@@ -17,6 +19,28 @@ export default function Header() {
       console.error('Failed to remove token on logout', error);
     }
     navigate('/calendar');
+  }
+
+  async function handleCheckMicrosoft() {
+    try {
+      setMsLoading(true);
+      setMsResult(null);
+      const res = await fetch('/api/calendar/health');
+      const data = await res.json();
+      const status: string = (data?.status || '').toUpperCase();
+      let color = 'secondary';
+      let label = status || 'UNKNOWN';
+      if (status === 'UP') color = 'success';
+      else if (status === 'THROTTLED') color = 'warning';
+      else if (status === 'DEGRADED') color = 'warning';
+      else if (status === 'DOWN') color = 'danger';
+      else if (status === 'NOT_CONFIGURED') color = 'secondary';
+      setMsResult({ label, color });
+    } catch {
+      setMsResult({ label: 'DOWN', color: 'danger' });
+    } finally {
+      setMsLoading(false);
+    }
   }
 
   return (
@@ -60,6 +84,18 @@ export default function Header() {
                   <Nav.Link as={Link} to={userRole === 'admin' ? '/admin/events' : '/events'} style={{ color: 'white' }}>
                     View Events
                   </Nav.Link>
+                  <div className="d-flex align-items-center ms-2">
+                    <button
+                      onClick={handleCheckMicrosoft}
+                      className="btn btn-sm btn-outline-light"
+                      disabled={msLoading}
+                    >
+                      {msLoading ? 'Checking…' : 'Check Microsoft Calendar'}
+                    </button>
+                    {msResult && (
+                      <span className={`badge bg-${msResult.color} ms-2`}>{msResult.label}</span>
+                    )}
+                  </div>
                   {userRole === 'admin' && (
                     <>
                       <Nav.Link as={Link} to="/blackout" style={{ color: 'white' }}>

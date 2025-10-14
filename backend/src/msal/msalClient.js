@@ -71,6 +71,44 @@ async function getCalendarEvents() {
   }
 }
 
+async function probeCalendarHealth() {
+  const userId = process.env.MICROSOFT_USER_ID;
+  if (!userId) {
+    return { ok: false, status: 'NOT_CONFIGURED', httpStatus: 500 };
+  }
+
+  try {
+    const accessToken = await getAppOnlyToken();
+    const client = Client.init({
+      authProvider: (done) => {
+        done(null, accessToken);
+      }
+    });
+
+    const res = await client
+      .api(`/users/${userId}/events`)
+      .select('id')
+      .top(1)
+      .get();
+
+    return { ok: true, status: 'UP', httpStatus: 200, count: Array.isArray(res.value) ? res.value.length : 0 };
+  } catch (error) {
+    const httpStatus = error?.statusCode || error?.code || 503;
+    let status = 'DOWN';
+    if (httpStatus === 429) status = 'THROTTLED';
+    if (httpStatus >= 500) status = 'DEGRADED';
+    const retryAfter = error?.responseHeaders?.['retry-after'] || error?.headers?.['retry-after'] || null;
+    return {
+      ok: false,
+      status,
+      httpStatus,
+      retryAfter,
+      message: error?.message || 'Unknown error'
+    };
+  }
+}
+
 module.exports = {
-  getCalendarEvents
+  getCalendarEvents,
+  probeCalendarHealth
 };
