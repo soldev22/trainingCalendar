@@ -20,7 +20,7 @@ let tokenCache = null;
  */
 async function getAppOnlyToken() {
   // If we have a valid, non-expired token in cache, return it
-  if (tokenCache && tokenCache.expiresOn * 1000 > Date.now() + 60000) { // 60s buffer
+  if (tokenCache && tokenCache.expiresAtMs > Date.now() + 60_000) { // 60s buffer
     return tokenCache.accessToken;
   }
 
@@ -30,7 +30,14 @@ async function getAppOnlyToken() {
 
   try {
     const response = await cca.acquireTokenByClientCredential(clientCredentialRequest);
-    tokenCache = response; // Cache the new token
+    const expiresOn = response.expiresOn; // Date or epoch seconds depending on library version
+    const expiresAtMs = expiresOn instanceof Date
+      ? expiresOn.getTime()
+      : (typeof expiresOn === 'number' ? expiresOn * 1000 : Date.now() + 3_000_000);
+    tokenCache = {
+      accessToken: response.accessToken,
+      expiresAtMs,
+    }; // Cache the new token with computed expiry in ms
     return response.accessToken;
   } catch (error) {
     console.error('Failed to acquire app-only token:', error);
@@ -66,6 +73,25 @@ async function getCalendarEvents() {
 
     return events.value;
   } catch (error) {
+    // If token likely expired, clear cache and retry once
+    if ((error?.statusCode === 401 || error?.code === 'InvalidAuthenticationToken') && tokenCache) {
+      try {
+        tokenCache = null;
+        const freshToken = await getAppOnlyToken();
+        const client = Client.init({
+          authProvider: (done) => done(null, freshToken)
+        });
+        const events = await client
+          .api(`/users/${userId}/events`)
+          .header('Prefer', 'outlook.timezone="GMT Standard Time"')
+          .select('subject,organizer,start,end')
+          .orderby('start/dateTime DESC')
+          .get();
+        return events.value;
+      } catch (retryErr) {
+        console.error(`Retry after clearing token cache failed for ${userId}:`, retryErr);
+      }
+    }
     console.error(`Failed to get calendar events for ${userId}:`, error);
     throw new Error('Could not retrieve calendar events from Microsoft Graph.');
   }
