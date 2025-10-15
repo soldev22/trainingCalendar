@@ -58,6 +58,7 @@ export default function CalendarPage() {
   const [error, setError] = useState<string | null>(null)
   const [blackouts, setBlackouts] = useState<Array<{ startDate: string; endDate: string; portion: 'full'|'am'|'pm'; reason?: string }>>([])
   const [msEvents, setMsEvents] = useState<any[]>([]) // State for Microsoft events
+  const [msWarning, setMsWarning] = useState<string | null>(null)
   const token = getToken()
   const currentUser = useMemo(() => {
     const t = getToken();
@@ -95,13 +96,6 @@ export default function CalendarPage() {
           fetch(`/api/calendar/events`),
         ]);
 
-        // If the MS Graph call fails, it's a server-side issue, not a client one.
-        // We'll rely on the catch block to handle the error thrown by a non-ok response.
-        if (!resMs.ok) {
-            const errorData = await resMs.json();
-            throw new Error(errorData.error || 'Failed to load Microsoft calendar events');
-        }
-
         if (!resE.ok) throw new Error((await resE.json()).error || 'Failed to load events');
         if (!resB.ok) throw new Error((await resB.json()).error || 'Failed to load blackouts');
 
@@ -115,6 +109,11 @@ export default function CalendarPage() {
           if (resMs.ok) {
             const dataMs = await resMs.json();
             setMsEvents(dataMs);
+            setMsWarning(null);
+          } else {
+            const errorData = await resMs.json().catch(() => ({} as any));
+            setMsEvents([]);
+            setMsWarning(errorData?.error || 'The Microsoft Calendar service is temporarily unavailable. Showing local and blackout events only.');
           }
         }
       } catch (e: any) {
@@ -321,6 +320,12 @@ export default function CalendarPage() {
           <button onClick={() => setView('year')} disabled={view==='year'} className={`btn ${view==='year' ? 'btn-primary' : 'btn-outline-secondary'}`}>Year</button>
         </div>
       </div>
+
+      {msWarning && (
+        <div className="alert alert-warning" role="alert">
+          {msWarning}
+        </div>
+      )}
 
       {/* Legend at top */}
       <div className="mb-3" style={{ padding: 8, border: '1px solid #eee', background: '#fff' }}>
