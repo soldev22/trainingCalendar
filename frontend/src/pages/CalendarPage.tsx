@@ -427,7 +427,7 @@ export default function CalendarPage() {
                       : (e.reason || '')
                     const eventEl = (
                       <span style={{
-                        display: 'inline-block',
+                        display: 'block',
                         background: labelBg,
                         color: labelColor,
                         padding: '2px 6px',
@@ -438,7 +438,7 @@ export default function CalendarPage() {
                       </span>
                     );
                     return (
-                      <div key={i} style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      <div key={i} style={{ whiteSpace: 'normal', overflowWrap: 'anywhere' }}>
                         {canEdit ? <Link to={`/events/${e._id}/edit`}>{eventEl}</Link> : eventEl}
                       </div>
                     );
