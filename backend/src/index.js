@@ -88,6 +88,7 @@ app.use('/api/blackouts', require('./routes/blackouts'));
 app.use('/api/admin', require('./routes/admin'));
 app.use('/api/auth/microsoft', require('./routes/auth_microsoft'));
 app.use('/api/calendar', require('./routes/calendar'));
+app.use('/api/calendar/tenant2', require('./routes/calendar_tenant2'));
 
 // Health check route - MUST be before the static file serving
 app.get('/health', (req, res) => {

@@ -59,6 +59,8 @@ export default function CalendarPage() {
   const [blackouts, setBlackouts] = useState<Array<{ startDate: string; endDate: string; portion: 'full'|'am'|'pm'; reason?: string }>>([])
   const [msEvents, setMsEvents] = useState<any[]>([]) // State for Microsoft events
   const [msWarning, setMsWarning] = useState<string | null>(null)
+  const [t2Events, setT2Events] = useState<any[]>([])
+  const [t2Warning, setT2Warning] = useState<string | null>(null)
   const [reloadTick, setReloadTick] = useState(0)
   const token = getToken()
   const currentUser = useMemo(() => {
@@ -91,10 +93,11 @@ export default function CalendarPage() {
         setLoading(true);
         setError(null);
 
-        const [resE, resB, resMs] = await Promise.all([
+        const [resE, resB, resMs, resT2] = await Promise.all([
           fetch(`/api/events?from=${from}&to=${to}`),
           fetch(`/api/blackouts?from=${from}&to=${to}`),
           fetch(`/api/calendar/events?from=${from}&to=${to}`),
+          fetch(`/api/calendar/tenant2?from=${from}&to=${to}`),
         ]);
 
         if (!resE.ok) throw new Error((await resE.json()).error || 'Failed to load events');
@@ -115,6 +118,16 @@ export default function CalendarPage() {
             const errorData = await resMs.json().catch(() => ({} as any));
             setMsEvents([]);
             setMsWarning(errorData?.error || 'The Microsoft Calendar service is temporarily unavailable. Showing local and blackout events only.');
+          }
+
+          if (resT2.ok) {
+            const dataT2 = await resT2.json();
+            setT2Events(dataT2);
+            setT2Warning(null);
+          } else {
+            const errorDataT2 = await resT2.json().catch(() => ({} as any));
+            setT2Events([]);
+            setT2Warning(errorDataT2?.error || 'The Tenant2 SharePoint service is temporarily unavailable.');
           }
         }
       } catch (e: any) {
@@ -182,8 +195,9 @@ export default function CalendarPage() {
       map.get(iso)!.push({ ...e, source: 'local' });
     }
 
-    // Process and merge Microsoft events, expanding multi-day spans
-    for (const msEvent of msEvents) {
+    // Process and merge Microsoft and Tenant2 events, expanding multi-day spans
+    const mergedExternal = [...msEvents, ...t2Events];
+    for (const msEvent of mergedExternal) {
       const startIso = msEvent?.start?.dateTime?.substring(0, 10);
       const endIsoRaw = msEvent?.end?.dateTime?.substring(0, 10);
       const startHM = msEvent?.start?.dateTime?.substring(11, 16) || '';
@@ -215,8 +229,9 @@ export default function CalendarPage() {
           createdBy: msEvent.organizer?.emailAddress?.name || 'Microsoft',
           startTime: curStart,
           endTime: curEnd,
-          source: 'microsoft',
+          source: msEvent.organizer?.emailAddress?.name === 'Tenant2' ? 'microsoft' : 'microsoft',
         };
+        // Note: we keep source as 'microsoft' for styling; below we choose color by organizer name
         map.get(curIso)!.push(transformedEvent);
 
         cur.setDate(cur.getDate() + 1);
@@ -366,6 +381,11 @@ export default function CalendarPage() {
       {msWarning && (
         <div className="alert alert-warning" role="alert">
           {msWarning}
+        </div>
+      )}
+      {t2Warning && (
+        <div className="alert alert-warning" role="alert">
+          {t2Warning}
         </div>
       )}
 
