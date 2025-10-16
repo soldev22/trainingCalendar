@@ -59,6 +59,7 @@ export default function CalendarPage() {
   const [blackouts, setBlackouts] = useState<Array<{ startDate: string; endDate: string; portion: 'full'|'am'|'pm'; reason?: string }>>([])
   const [msEvents, setMsEvents] = useState<any[]>([]) // State for Microsoft events
   const [msWarning, setMsWarning] = useState<string | null>(null)
+  const [reloadTick, setReloadTick] = useState(0)
   const token = getToken()
   const currentUser = useMemo(() => {
     const t = getToken();
@@ -128,7 +129,23 @@ export default function CalendarPage() {
     return () => {
       cancelled = true;
     };
-  }, [from, to]);
+  }, [from, to, reloadTick]);
+
+  // Auto-refresh when window regains focus or tab becomes visible
+  useEffect(() => {
+    function triggerRefresh() {
+      setReloadTick((v: number) => v + 1);
+    }
+    function onVisibilityChange() {
+      if (document.visibilityState === 'visible') triggerRefresh();
+    }
+    window.addEventListener('focus', triggerRefresh);
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    return () => {
+      window.removeEventListener('focus', triggerRefresh);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+    };
+  }, []);
 
   // Build per-day blackout portion map
   const dayBlackout = useMemo(() => {
@@ -318,6 +335,7 @@ export default function CalendarPage() {
           <button onClick={() => setView('week')} disabled={view==='week'} className={`btn ${view==='week' ? 'btn-primary' : 'btn-outline-secondary'}`}>Week</button>
           <button onClick={() => setView('month')} disabled={view==='month'} className={`btn ${view==='month' ? 'btn-primary' : 'btn-outline-secondary'}`}>Month</button>
           <button onClick={() => setView('year')} disabled={view==='year'} className={`btn ${view==='year' ? 'btn-primary' : 'btn-outline-secondary'}`}>Year</button>
+          <button onClick={() => setReloadTick((v) => v + 1)} className="btn btn-outline-secondary">Refresh</button>
         </div>
       </div>
 
