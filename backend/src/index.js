@@ -10,6 +10,12 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+// Early health check route before any other middleware
+app.get('/health', (req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
+  res.status(200).json({ ok: true, service: 'backend', time: new Date().toISOString() });
+});
+
 const session = require('express-session');
 const crypto = require('crypto');
 
@@ -92,10 +98,7 @@ app.use('/api/auth/microsoft', require('./routes/auth_microsoft'));
 app.use('/api/calendar', require('./routes/calendar'));
 app.use('/api/calendar/tenant2', require('./routes/calendar_tenant2'));
 
-// Health check route - MUST be before the static file serving
-app.get('/health', (req, res) => {
-  res.json({ ok: true, service: 'backend', time: new Date().toISOString() });
-});
+// Health check route remains above; this is kept for backward compatibility
 
 // Serve frontend static files
 app.use(express.static(path.join(__dirname, '../../frontend/dist')));
