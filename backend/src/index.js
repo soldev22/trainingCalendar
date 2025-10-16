@@ -11,10 +11,12 @@ app.use(cors());
 app.use(express.json());
 
 const session = require('express-session');
+const crypto = require('crypto');
 
 // Session middleware
+const SESSION_SECRET = process.env.SESSION_SECRET || crypto.randomBytes(32).toString('hex');
 app.use(session({
-  secret: process.env.SESSION_SECRET, // This should be a long, random string in your .env file
+  secret: SESSION_SECRET, // This should be a long, random string in your .env file
   resave: false,
   saveUninitialized: false,
   cookie: {
