@@ -182,21 +182,45 @@ export default function CalendarPage() {
       map.get(iso)!.push({ ...e, source: 'local' });
     }
 
-    // Process and merge Microsoft events
+    // Process and merge Microsoft events, expanding multi-day spans
     for (const msEvent of msEvents) {
-      const isoDate = msEvent.start.dateTime.substring(0, 10); // YYYY-MM-DD
-      if (!map.has(isoDate)) map.set(isoDate, []);
+      const startIso = msEvent?.start?.dateTime?.substring(0, 10);
+      const endIsoRaw = msEvent?.end?.dateTime?.substring(0, 10);
+      const startHM = msEvent?.start?.dateTime?.substring(11, 16) || '';
+      const endHM = msEvent?.end?.dateTime?.substring(11, 16) || '';
 
-      const transformedEvent: EventItem = {
-        _id: msEvent.id,
-        date: isoDate,
-        reason: msEvent.subject,
-        createdBy: msEvent.organizer.emailAddress.name,
-        startTime: msEvent.start.dateTime.substring(11, 16), // HH:mm
-        endTime: msEvent.end.dateTime.substring(11, 16), // HH:mm
-        source: 'microsoft',
-      };
-      map.get(isoDate)!.push(transformedEvent);
+      if (!startIso || !endIsoRaw) continue;
+
+      // Determine if end day should be included. If end time is 00:00, treat end day as exclusive
+      const endExclusive = endHM === '00:00';
+      const endInclusiveIso = endExclusive
+        ? (() => { const d = new Date(endIsoRaw); d.setDate(d.getDate() - 1); return fmtLocalYMD(d); })()
+        : endIsoRaw;
+
+      // Iterate day by day from startIso to endInclusiveIso
+      const cur = new Date(startIso);
+      const last = new Date(endInclusiveIso);
+      while (cur <= last) {
+        const curIso = fmtLocalYMD(cur);
+        if (!map.has(curIso)) map.set(curIso, []);
+
+        // Times only on boundary days
+        const curStart = curIso === startIso ? (startHM || undefined) : undefined;
+        const curEnd = curIso === endInclusiveIso ? (endHM || undefined) : undefined;
+
+        const transformedEvent: EventItem = {
+          _id: `${msEvent.id}:${curIso}`,
+          date: curIso,
+          reason: msEvent.subject,
+          createdBy: msEvent.organizer?.emailAddress?.name || 'Microsoft',
+          startTime: curStart,
+          endTime: curEnd,
+          source: 'microsoft',
+        };
+        map.get(curIso)!.push(transformedEvent);
+
+        cur.setDate(cur.getDate() + 1);
+      }
     }
 
     // Convert blackout ranges into per-day events
