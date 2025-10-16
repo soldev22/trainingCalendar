@@ -47,47 +47,64 @@ async function getAppOnlyToken() {
 }
 
 /**
- * Initializes a Graph client with an app-only token and fetches calendar events.
+ * Initializes a Graph client with an app-only token and fetches calendar events within a date range.
+ * @param {string|undefined} from - inclusive start date (YYYY-MM-DD)
+ * @param {string|undefined} to - inclusive end date (YYYY-MM-DD)
  */
-async function getCalendarEvents() {
+async function getCalendarEvents(from, to) {
   const userId = process.env.MICROSOFT_USER_ID;
   if (!userId) {
     throw new Error('MICROSOFT_USER_ID is not defined in the .env file.');
   }
 
+  // Build ISO date-time range in UTC. calendarView expects endDateTime EXCLUSIVE.
+  // So we use [fromT00:00:00Z, (to+1)T00:00:00Z)
+  const startDateTime = from
+    ? new Date(`${from}T00:00:00Z`).toISOString()
+    : new Date().toISOString();
+  const endDateTime = to
+    ? (() => {
+        const d = new Date(`${to}T00:00:00Z`);
+        d.setUTCDate(d.getUTCDate() + 1);
+        return d.toISOString();
+      })()
+    : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+
+  async function fetchRange(accessToken) {
+    const client = Client.init({ authProvider: (done) => done(null, accessToken) });
+    const collected = [];
+
+    let request = client
+      .api(`/users/${userId}/calendarView`)
+      .header('Prefer', 'outlook.timezone="GMT Standard Time"')
+      .query({ startDateTime, endDateTime })
+      .select('id,subject,organizer,start,end')
+      .orderby('start/dateTime ASC')
+      .top(50);
+
+    // First page
+    let page = await request.get();
+    if (Array.isArray(page.value)) collected.push(...page.value);
+
+    // Paginate if nextLink present
+    while (page['@odata.nextLink']) {
+      const nextLink = page['@odata.nextLink'];
+      page = await client.api(nextLink).get();
+      if (Array.isArray(page.value)) collected.push(...page.value);
+    }
+
+    return collected;
+  }
+
   try {
     const accessToken = await getAppOnlyToken();
-
-    const client = Client.init({
-      authProvider: (done) => {
-        done(null, accessToken);
-      }
-    });
-
-    const events = await client
-      .api(`/users/${userId}/events`)
-      .header('Prefer', 'outlook.timezone="GMT Standard Time"') // Request times in a specific timezone
-      .select('subject,organizer,start,end')
-      .orderby('start/dateTime DESC')
-      .get();
-
-    return events.value;
+    return await fetchRange(accessToken);
   } catch (error) {
-    // If token likely expired, clear cache and retry once
     if ((error?.statusCode === 401 || error?.code === 'InvalidAuthenticationToken') && tokenCache) {
       try {
         tokenCache = null;
         const freshToken = await getAppOnlyToken();
-        const client = Client.init({
-          authProvider: (done) => done(null, freshToken)
-        });
-        const events = await client
-          .api(`/users/${userId}/events`)
-          .header('Prefer', 'outlook.timezone="GMT Standard Time"')
-          .select('subject,organizer,start,end')
-          .orderby('start/dateTime DESC')
-          .get();
-        return events.value;
+        return await fetchRange(freshToken);
       } catch (retryErr) {
         console.error(`Retry after clearing token cache failed for ${userId}:`, retryErr);
       }

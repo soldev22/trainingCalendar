@@ -5,7 +5,8 @@ const { getCalendarEvents, probeCalendarHealth } = require('../msal/msalClient')
 // Route to get calendar events for the configured user
 router.get('/events', async (req, res) => {
     try {
-        const events = await getCalendarEvents();
+        const { from, to } = req.query;
+        const events = await getCalendarEvents(from, to);
         res.json(events);
     } catch (error) {
         console.error('Error fetching MS calendar events:', error.message);

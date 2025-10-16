@@ -94,7 +94,7 @@ export default function CalendarPage() {
         const [resE, resB, resMs] = await Promise.all([
           fetch(`/api/events?from=${from}&to=${to}`),
           fetch(`/api/blackouts?from=${from}&to=${to}`),
-          fetch(`/api/calendar/events`),
+          fetch(`/api/calendar/events?from=${from}&to=${to}`),
         ]);
 
         if (!resE.ok) throw new Error((await resE.json()).error || 'Failed to load events');
