@@ -2,23 +2,42 @@ const { ConfidentialClientApplication } = require('@azure/msal-node');
 const { Client } = require('@microsoft/microsoft-graph-client');
 require('isomorphic-fetch');
 
-const msalConfig = {
-  auth: {
-    clientId: process.env.TENANT2_CLIENT_ID,
-    authority: `https://login.microsoftonline.com/${process.env.TENANT2_ID}`,
-    clientSecret: process.env.TENANT2_CLIENT_SECRET,
-  }
-};
-
-const cca = new ConfidentialClientApplication(msalConfig);
+let cca = null;
 let tokenCache = null;
+
+function getCca() {
+  const clientId = process.env.TENANT2_CLIENT_ID;
+  const tenantId = process.env.TENANT2_ID;
+  const clientSecret = process.env.TENANT2_CLIENT_SECRET;
+  if (!clientId || !tenantId || !clientSecret) {
+    const missing = [
+      !clientId ? 'TENANT2_CLIENT_ID' : null,
+      !tenantId ? 'TENANT2_ID' : null,
+      !clientSecret ? 'TENANT2_CLIENT_SECRET' : null,
+    ].filter(Boolean).join(', ');
+    const err = new Error(`Tenant2 credentials not configured: ${missing}`);
+    err.code = 'TENANT2_CONFIG_MISSING';
+    throw err;
+  }
+  if (!cca) {
+    const msalConfig = {
+      auth: {
+        clientId,
+        authority: `https://login.microsoftonline.com/${tenantId}`,
+        clientSecret,
+      }
+    };
+    cca = new ConfidentialClientApplication(msalConfig);
+  }
+  return cca;
+}
 
 async function getTenant2Token() {
   if (tokenCache && tokenCache.expiresAtMs > Date.now() + 60_000) {
     return tokenCache.accessToken;
   }
   const req = { scopes: ['https://graph.microsoft.com/.default'] };
-  const resp = await cca.acquireTokenByClientCredential(req);
+  const resp = await getCca().acquireTokenByClientCredential(req);
   const expiresOn = resp.expiresOn;
   const expiresAtMs = expiresOn instanceof Date ? expiresOn.getTime() : (typeof expiresOn === 'number' ? expiresOn * 1000 : Date.now() + 3_000_000);
   tokenCache = { accessToken: resp.accessToken, expiresAtMs };
