@@ -100,35 +100,38 @@ export default function CalendarPage() {
           fetch(`/api/calendar/tenant2?from=${from}&to=${to}`),
         ]);
 
+        // Parse all responses before mutating state to minimize flicker
         if (!resE.ok) throw new Error((await resE.json()).error || 'Failed to load events');
         if (!resB.ok) throw new Error((await resB.json()).error || 'Failed to load blackouts');
 
-        // If all successful, update state
+        const dataE = await resE.json();
+        const dataB = await resB.json();
+
+        let msData: any[] = [];
+        let msWarn: string | null = null;
+        if (resMs.ok) {
+          msData = await resMs.json();
+        } else {
+          const errorData = await resMs.json().catch(() => ({} as any));
+          msWarn = errorData?.error || 'The Microsoft Calendar service is temporarily unavailable. Showing local and blackout events only.';
+        }
+
+        let t2Data: any[] = [];
+        let t2Warn: string | null = null;
+        if (resT2.ok) {
+          t2Data = await resT2.json();
+        } else {
+          const errorDataT2 = await resT2.json().catch(() => ({} as any));
+          t2Warn = errorDataT2?.error || 'The Tenant2 SharePoint service is temporarily unavailable.';
+        }
+
         if (!cancelled) {
-          const dataE = await resE.json();
-          const dataB = await resB.json();
           setEvents(dataE.events);
           setBlackouts(dataB.blackouts);
-
-          if (resMs.ok) {
-            const dataMs = await resMs.json();
-            setMsEvents(dataMs);
-            setMsWarning(null);
-          } else {
-            const errorData = await resMs.json().catch(() => ({} as any));
-            setMsEvents([]);
-            setMsWarning(errorData?.error || 'The Microsoft Calendar service is temporarily unavailable. Showing local and blackout events only.');
-          }
-
-          if (resT2.ok) {
-            const dataT2 = await resT2.json();
-            setT2Events(dataT2);
-            setT2Warning(null);
-          } else {
-            const errorDataT2 = await resT2.json().catch(() => ({} as any));
-            setT2Events([]);
-            setT2Warning(errorDataT2?.error || 'The Tenant2 SharePoint service is temporarily unavailable.');
-          }
+          setMsEvents(msData);
+          setMsWarning(msWarn);
+          setT2Events(t2Data);
+          setT2Warning(t2Warn);
         }
       } catch (e: any) {
         if (!cancelled) {
