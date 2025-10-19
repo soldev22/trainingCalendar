@@ -266,7 +266,7 @@ export default function CalendarPage() {
       });
     }
     return map;
-  }, [events, msEvents, blackouts]);
+  }, [events, msEvents, t2Events, blackouts]);
 
   // Build simple month grid (for Month view)
   const first = startOfMonth(cursor);
