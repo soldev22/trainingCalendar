@@ -61,6 +61,28 @@ function toIsoDate(dateOnlyStr) {
   return new Date(`${dateOnlyStr}T00:00:00Z`);
 }
 
+function resolveDateField(fields) {
+  if (!fields) return null;
+  // Prefer explicit known internal names first
+  const preferred = [
+    'DateBooked',
+    'BookingDate',
+    'EventDate',
+    'StartDate',
+    'Start',
+    'Date',
+  ];
+  for (const k of preferred) {
+    if (fields[k]) return fields[k];
+  }
+  // Fallback: pick first property that looks like a date string
+  const isoLike = /^(\d{4}-\d{2}-\d{2})(?:[T\s]\d{2}:\d{2}(:\d{2})?(?:\.\d+)?Z?)?$/;
+  for (const [k, v] of Object.entries(fields)) {
+    if (typeof v === 'string' && isoLike.test(v)) return v;
+  }
+  return null;
+}
+
 async function resolveSiteAndListIds(client) {
   const site = await client.api(`/sites/${process.env.TENANT2_SITE_HOSTNAME || 'irisartstudio.sharepoint.com'}`).get();
   const siteId = site.id;
@@ -77,7 +99,8 @@ async function getTenant2ListEvents(from, to) {
   const { siteId, listId } = await resolveSiteAndListIds(client);
 
   const collected = [];
-  let url = `/sites/${siteId}/lists/${listId}/items?$expand=fields($select=Title,DateBooked)&$select=id,fields&$top=50`;
+  // Expand all fields and select id+fields. We'll resolve the date field dynamically.
+  let url = `/sites/${siteId}/lists/${listId}/items?$expand=fields&$select=id,fields&$top=200`;
 
   while (url) {
     const page = await client.api(url).get();
@@ -92,7 +115,7 @@ async function getTenant2ListEvents(from, to) {
   for (const it of collected) {
     const f = it.fields || {};
     const title = f.Title || 'Booking';
-    const db = f.DateBooked;
+    const db = resolveDateField(f);
     if (!db) continue;
 
     let start = null;
