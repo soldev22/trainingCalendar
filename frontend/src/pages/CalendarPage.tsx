@@ -431,13 +431,13 @@ export default function CalendarPage() {
                   background: tileBg,
                   color: inMonth ? '#111' : '#aaa',
                   textAlign: 'right',
-                  minHeight: 90,
+                  minHeight: 150,
                 }}
               >
                 <button onClick={() => gotoWeek(d)} style={{ fontWeight: 600, background: 'transparent', border: 'none', cursor: 'pointer', color: 'inherit' }} title="View week">
                   {d.getDate()}
                 </button>
-                <div style={{ marginTop: 6, textAlign: 'left', fontSize: 12, color: '#111', maxHeight: 60, overflow: 'hidden' }}>
+                <div style={{ marginTop: 6, textAlign: 'left', fontSize: 12, color: '#111', maxHeight: 140, overflowY: 'auto' }}>
                   {(dayEvents.get(iso) || [])
                     .filter((ev: EventItem) => ev.source !== 'blackout')
                     .map((e: EventItem, i: number) => {
@@ -497,7 +497,7 @@ export default function CalendarPage() {
                 ? 'linear-gradient(to bottom, #ffffff 50%, #374151 50%)'
                 : 'white';
             return (
-              <div key={idx} style={{ padding: 8, border: '1px solid #eee', background: tileBg, minHeight: 120 }}>
+              <div key={idx} style={{ padding: 8, border: '1px solid #eee', background: tileBg, minHeight: 180 }}>
                 <div style={{ fontWeight: 600 }}>
                   {d.toLocaleDateString(undefined, { weekday: 'short' })} {d.getDate()}
                 </div>
