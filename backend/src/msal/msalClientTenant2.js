@@ -77,7 +77,7 @@ async function getTenant2ListEvents(from, to) {
   const { siteId, listId } = await resolveSiteAndListIds(client);
 
   const collected = [];
-  let url = `/sites/${siteId}/lists/${listId}/items?$expand=fields(select=Title,DateBooked)&$top=50`;
+  let url = `/sites/${siteId}/lists/${listId}/items?$expand=fields($select=Title,DateBooked)&$select=id,fields&$top=50`;
 
   while (url) {
     const page = await client.api(url).get();
