@@ -439,7 +439,15 @@ export default function CalendarPage() {
                     .map((e: EventItem, i: number) => {
                     const timeLabel = e.startTime && e.endTime ? `${e.startTime}–${e.endTime}` : e.startTime ? e.startTime : '';
                     const isBlackout = e.source === 'blackout';
-                    const labelBg = isBlackout ? '#ef4444' : e.source === 'microsoft' ? '#bfdbfe' : e.status === 'confirmed' ? '#fecaca' : '#fef08a';
+                    const labelBg = isBlackout
+                      ? '#ef4444'
+                      : (e.source === 'microsoft' && e.createdBy === 'Tenant2')
+                        ? '#fb923c'
+                        : e.source === 'microsoft'
+                          ? '#bfdbfe'
+                          : e.status === 'confirmed'
+                            ? '#fecaca'
+                            : '#fef08a';
                     const labelColor = isBlackout ? '#fff' : '#111';
                     const canEdit = e.source === 'local' && currentUser && (currentUser.role === 'admin' || currentUser.sub === e.createdBy);
                     const displayText = e.source === 'microsoft'
@@ -495,7 +503,15 @@ export default function CalendarPage() {
                     .map((e: EventItem, i: number) => {
                     const timeLabel = e.startTime && e.endTime ? `${e.startTime}–${e.endTime}` : e.startTime ? e.startTime : '';
                     const isBlackout = e.source === 'blackout';
-                    const labelBg = isBlackout ? '#ef4444' : e.source === 'microsoft' ? '#bfdbfe' : e.status === 'confirmed' ? '#fecaca' : '#fef08a';
+                    const labelBg = isBlackout
+                      ? '#ef4444'
+                      : (e.source === 'microsoft' && e.createdBy === 'Tenant2')
+                        ? '#fb923c'
+                        : e.source === 'microsoft'
+                          ? '#bfdbfe'
+                          : e.status === 'confirmed'
+                            ? '#fecaca'
+                            : '#fef08a';
                     const labelColor = isBlackout ? '#fff' : '#111';
                     const canEdit = e.source === 'local' && currentUser && (currentUser.role === 'admin' || currentUser.sub === e.createdBy);
                     const displayText = e.source === 'microsoft'
